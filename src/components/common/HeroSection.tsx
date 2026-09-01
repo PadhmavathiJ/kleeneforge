@@ -1,17 +1,7 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
 import { MathDisplay } from './MathDisplay';
-import {
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Cpu,
-  BrainCircuit,
-  GraduationCap,
-  Scale,
-  Binary,
-  Layers,
-} from 'lucide-react';
+import { ArrowRight, ShieldCheck, GraduationCap } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   const [, actions] = useAppStore();
@@ -55,13 +45,6 @@ export const HeroSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Subtitle description */}
-        <p className="max-w-2xl mx-auto text-slate-400 text-sm sm:text-base leading-relaxed">
-          Not just a basic converter. An interactive mathematics laboratory that visually reveals the full
-          <span className="text-cyan-300 font-medium"> Reasoning Pipeline</span> behind Subset Construction,
-          DFA Minimization, Pumping Lemma Contradictions, and GATE-level problem solving.
-        </p>
-
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
           <button
@@ -79,61 +62,6 @@ export const HeroSection: React.FC = () => {
             <GraduationCap className="w-4 h-4 text-purple-400" />
             <span>START EXAM MODE</span>
           </button>
-        </div>
-
-        {/* Feature Grid Highlights */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-10 text-left">
-          <div
-            onClick={() => actions.setView('CONVERT')}
-            className="p-3.5 rounded-xl glass-panel glass-panel-hover cursor-pointer space-y-1.5"
-          >
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Cpu className="w-4 h-4" />
-              <span className="text-xs font-mono font-bold">Reasoning Pipeline</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Step-by-step subset construction & GNFA state elimination.
-            </p>
-          </div>
-
-          <div
-            onClick={() => actions.setView('CHECK_ANSWER')}
-            className="p-3.5 rounded-xl glass-panel glass-panel-hover cursor-pointer space-y-1.5"
-          >
-            <div className="flex items-center gap-2 text-emerald-400">
-              <Scale className="w-4 h-4" />
-              <span className="text-xs font-mono font-bold">Check My Answer</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Pins down shortest counterexamples and exact state divergence.
-            </p>
-          </div>
-
-          <div
-            onClick={() => actions.setView('PUMPING')}
-            className="p-3.5 rounded-xl glass-panel glass-panel-hover cursor-pointer space-y-1.5"
-          >
-            <div className="flex items-center gap-2 text-amber-400">
-              <BrainCircuit className="w-4 h-4" />
-              <span className="text-xs font-mono font-bold">Pumping Lemma</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              5-stage interactive proof lab respecting adversarial quantifiers.
-            </p>
-          </div>
-
-          <div
-            onClick={() => actions.setView('AI_TUTOR')}
-            className="p-3.5 rounded-xl glass-panel glass-panel-hover cursor-pointer space-y-1.5"
-          >
-            <div className="flex items-center gap-2 text-purple-400">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-xs font-mono font-bold">Kleene Mentor</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Multimodal Socratic tutor with diagram & photo OCR assistance.
-            </p>
-          </div>
         </div>
       </div>
     </div>

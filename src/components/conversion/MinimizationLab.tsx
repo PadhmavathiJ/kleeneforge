@@ -1,7 +1,7 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
-import { useAppStore } from '../../store/appStore';
 import { Automaton } from '../../core/types';
 import { minimizeDFA } from '../../core/minimization';
+import { validateAutomaton } from '../../core/validation';
 import { checkAutomataEquivalence } from '../../core/equivalence';
 import { simulateAutomaton, generateTestStrings } from '../../core/simulation';
 import { AUTOMATON_PRESETS } from '../../core/presets';
@@ -28,8 +28,6 @@ import {
 } from 'lucide-react';
 
 export const MinimizationLab: React.FC = () => {
-  const [store, actions] = useAppStore();
-
   // Load a 6-state textbook DFA by default
   const defaultMinimizationDFA = useMemo(() => {
     return AUTOMATON_PRESETS.find(p => p.id === 'dfa_minimization_textbook')!.automaton;
@@ -43,21 +41,22 @@ export const MinimizationLab: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [viewMode, setViewMode] = useState<'side_by_side' | 'graph_only' | 'table_only'>('side_by_side');
   const [testInput, setTestInput] = useState('01');
+  const [inputMode, setInputMode] = useState<'EXAMPLE' | 'BUILDER'>('EXAMPLE');
+  const [hasRun, setHasRun] = useState(true);
+  const [builderError, setBuilderError] = useState<string | null>(null);
 
   // Compute deterministic minimization
-  const minResult = useMemo(() => {
-    return minimizeDFA(inputDfa);
-  }, [inputDfa]);
+  const minResult = useMemo(() => hasRun ? minimizeDFA(inputDfa) : null, [inputDfa, hasRun]);
 
   // Equivalence verification
   const eqResult = useMemo(() => {
-    return checkAutomataEquivalence(inputDfa, minResult.minimalDfa);
+    return minResult ? checkAutomataEquivalence(inputDfa, minResult.minimalDfa) : null;
   }, [inputDfa, minResult]);
 
-  const totalSteps = minResult.steps.length;
-  const currentStep = minResult.steps[currentStepIndex];
+  const totalSteps = minResult?.steps.length ?? 0;
+  const currentStep = minResult?.steps[currentStepIndex];
   const inputMembership = simulateAutomaton(inputDfa, testInput);
-  const minimizedMembership = simulateAutomaton(minResult.minimalDfa, testInput);
+  const minimizedMembership = minResult ? simulateAutomaton(minResult.minimalDfa, testInput) : null;
 
   // Auto-play timer
   useEffect(() => {
@@ -82,8 +81,43 @@ export const MinimizationLab: React.FC = () => {
       setInputDfa(JSON.parse(JSON.stringify(p.automaton)));
       setCurrentStepIndex(0);
       setIsPlaying(false);
+      setInputMode('EXAMPLE');
+      setHasRun(true);
+      setBuilderError(null);
     }
   };
+
+  const beginCustomBuilder = () => {
+    setInputDfa({ type: 'DFA', states: [], alphabet: [], startState: '', acceptStates: [], transitions: [], description: 'My DFA' });
+    setInputMode('BUILDER');
+    setHasRun(false);
+    setCurrentStepIndex(0);
+    setIsPlaying(false);
+    setBuilderError(null);
+  };
+
+  const minimizeMyDfa = () => {
+    const validation = validateAutomaton(inputDfa);
+    const error = validation.issues.find(issue => issue.type === 'error');
+    if (error) { setBuilderError(`${error.title}: ${error.message}`); return; }
+    if (inputDfa.type !== 'DFA') { setBuilderError('Choose DFA mode before minimizing.'); return; }
+    setBuilderError(null);
+    setCurrentStepIndex(0);
+    setIsPlaying(false);
+    setHasRun(true);
+  };
+
+  if (!hasRun) {
+    return <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-1"><h2 className="text-2xl font-bold font-mono text-white flex items-center gap-2"><Minimize2 className="w-6 h-6 text-indigo-400" /> Build My DFA</h2><p className="text-xs text-slate-400 font-mono">1. Add states  2. Mark one start state and any final states  3. Add one transition per symbol from each state  4. Minimize.</p></div>
+        <button onClick={() => handleLoadPreset('dfa_minimization_textbook')} className="px-3 py-2 rounded-xl border border-slate-700 text-xs font-mono text-slate-200 hover:bg-slate-800">Try Example</button>
+      </div>
+      <AutomataCanvas automaton={inputDfa} onChange={setInputDfa} title="My DFA Builder" />
+      {builderError && <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">Fix this before minimizing: {builderError}</div>}
+      <div className="flex flex-wrap gap-3"><button onClick={minimizeMyDfa} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold font-mono text-sm">Minimize My DFA</button><button onClick={() => { setInputDfa({ type: 'DFA', states: [], alphabet: [], startState: '', acceptStates: [], transitions: [] }); setBuilderError(null); }} className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 font-mono text-sm">Clear DFA</button></div>
+    </div>;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -100,6 +134,8 @@ export const MinimizationLab: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button onClick={() => handleLoadPreset('dfa_minimization_textbook')} className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-mono text-slate-200 hover:bg-slate-800">Try Example</button>
+          <button onClick={beginCustomBuilder} className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-mono font-bold text-white">Build My DFA</button>
           <span className="text-xs font-mono text-slate-400">Load Preset:</span>
           <select
             onChange={e => handleLoadPreset(e.target.value)}
@@ -118,7 +154,7 @@ export const MinimizationLab: React.FC = () => {
           <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-center">
             <span className="text-[10px] text-slate-400 font-mono block">Original DFA</span>
             <span className="text-base font-bold font-mono text-cyan-300">
-              {minResult.originalDfa.states.length} States
+              {minResult!.originalDfa.states.length} States
             </span>
           </div>
 
@@ -127,21 +163,21 @@ export const MinimizationLab: React.FC = () => {
           <div className="p-3 bg-indigo-950/40 rounded-xl border border-indigo-500/50 text-center glow-indigo">
             <span className="text-[10px] text-indigo-300 font-mono block">Minimal DFA</span>
             <span className="text-base font-bold font-mono text-emerald-300">
-              {minResult.minimalDfa.states.length} States
+              {minResult!.minimalDfa.states.length} States
             </span>
           </div>
 
           <div className="hidden sm:block text-xs font-mono text-slate-400">
             <span className="text-emerald-400 font-bold">
-              {minResult.originalDfa.states.length - minResult.minimalDfa.states.length} redundant state(s)
+              {minResult!.originalDfa.states.length - minResult!.minimalDfa.states.length} redundant state(s)
             </span>{' '}
             merged via partition refinement.
           </div>
         </div>
 
-        <div className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-xl border ${eqResult.areEquivalent ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-rose-300 bg-rose-500/10 border-rose-500/30'}`}>
+        <div className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-xl border ${eqResult!.areEquivalent ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-rose-300 bg-rose-500/10 border-rose-500/30'}`}>
           <CheckCircle2 className="w-4 h-4" />
-          <span>{eqResult.areEquivalent ? 'L(Original) = L(Minimal) Verified' : 'Equivalence verification failed'}</span>
+          <span>{eqResult!.areEquivalent ? 'L(Original) = L(Minimal) Verified' : 'Equivalence verification failed'}</span>
         </div>
       </div>
 
@@ -236,7 +272,7 @@ export const MinimizationLab: React.FC = () => {
           </div>
 
           {viewMode !== 'table_only' && (
-            <AutomataCanvas automaton={inputDfa} onChange={setInputDfa} title="Editable Input DFA" />
+            <AutomataCanvas automaton={inputDfa} onChange={setInputDfa} title={inputMode === 'BUILDER' ? 'My DFA (used by the engine)' : 'Example DFA'} activeStateIds={currentStep?.activeStateIds} highlightedTransitions={currentStep?.activeTransitions} />
           )}
           {viewMode !== 'graph_only' && (
             <TransitionTableView automaton={inputDfa} />
@@ -247,20 +283,22 @@ export const MinimizationLab: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider">
-              Minimized Canonical DFA ({minResult.minimalDfa.states.length} states)
+              Minimized Canonical DFA ({minResult!.minimalDfa.states.length} states)
             </span>
           </div>
 
           {viewMode !== 'table_only' && (
             <AutomataCanvas
-              automaton={minResult.minimalDfa}
+              automaton={minResult!.minimalDfa}
               readOnly
               title="Minimal Canonical DFA"
+              activeStateIds={currentStep?.phase === 'BUILD_STATE' || currentStep?.phase === 'MERGE' ? currentStep.activeStateIds : undefined}
+              highlightedTransitions={currentStep?.phase === 'BUILD_TRANSITION' ? currentStep.activeTransitions : undefined}
             />
           )}
 
           {viewMode !== 'graph_only' && (
-            <TransitionTableView automaton={minResult.minimalDfa} />
+            <TransitionTableView automaton={minResult!.minimalDfa} />
           )}
 
           {/* Partition Refinement Step Card */}
@@ -304,9 +342,9 @@ export const MinimizationLab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-xs font-mono space-y-2">
           <div className="font-bold text-indigo-300">Reachability and final equivalence classes</div>
-          <div className="text-slate-400">Removed unreachable states: <span className="text-slate-200">{minResult.unreachableRemoved.length ? `{${minResult.unreachableRemoved.join(', ')}}` : 'none'}</span></div>
+          <div className="text-slate-400">Removed unreachable states: <span className="text-slate-200">{minResult!.unreachableRemoved.length ? `{${minResult!.unreachableRemoved.join(', ')}}` : 'none'}</span></div>
           <div className="flex flex-wrap gap-2 pt-1">
-            {Object.entries(minResult.equivalenceClasses).map(([name, states]) => (
+            {Object.entries(minResult!.equivalenceClasses).map(([name, states]) => (
               <span key={name} className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-indigo-200">{name} = &#123;{states.join(', ')}&#125;</span>
             ))}
           </div>
@@ -316,8 +354,8 @@ export const MinimizationLab: React.FC = () => {
           <label className="text-slate-400">Test string</label>
           <input value={testInput} onChange={e => setTestInput(e.target.value)} placeholder="empty string" className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-cyan-200" />
           <span className={inputMembership.accepted ? 'text-emerald-300' : 'text-rose-300'}>Input: {inputMembership.accepted ? 'ACCEPT' : 'REJECT'}</span>
-          <span className={minimizedMembership.accepted ? 'text-emerald-300' : 'text-rose-300'}>Minimized: {minimizedMembership.accepted ? 'ACCEPT' : 'REJECT'}</span>
-          <span className={inputMembership.accepted === minimizedMembership.accepted ? 'text-emerald-400' : 'text-rose-400'}>{inputMembership.accepted === minimizedMembership.accepted ? 'Membership agrees' : 'Membership differs'}</span>
+          <span className={minimizedMembership?.accepted ? 'text-emerald-300' : 'text-rose-300'}>Minimized: {minimizedMembership?.accepted ? 'ACCEPT' : 'REJECT'}</span>
+          <span className={minimizedMembership && inputMembership.accepted === minimizedMembership.accepted ? 'text-emerald-400' : 'text-rose-400'}>{minimizedMembership && inputMembership.accepted === minimizedMembership.accepted ? 'Membership agrees' : 'Membership differs'}</span>
         </div>
       </div>
     </div>

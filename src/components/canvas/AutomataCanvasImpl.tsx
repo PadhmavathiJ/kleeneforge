@@ -104,24 +104,24 @@ const AutomataCanvasInner: React.FC<AutomataCanvasProps> = ({
         type: isSelfLoop ? 'smoothstep' : 'default',
         animated: isHighlighted,
         style: {
-          stroke: isHighlighted ? '#38bdf8' : '#64748b',
-          strokeWidth: isHighlighted ? 3 : 1.8,
+          stroke: isHighlighted ? '#d97706' : '#334155',
+          strokeWidth: isHighlighted ? 4 : 2.5,
         },
         labelStyle: {
-          fill: isHighlighted ? '#38bdf8' : '#e2e8f0',
+          fill: isHighlighted ? '#b45309' : '#0f172a',
           fontWeight: 700,
           fontFamily: 'monospace',
           fontSize: 12,
         },
         labelBgStyle: {
-          fill: '#0f172a',
-          fillOpacity: 0.9,
+          fill: '#ffffff',
+          fillOpacity: 0.96,
           rx: 4,
           ry: 4,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isHighlighted ? '#38bdf8' : '#64748b',
+          color: isHighlighted ? '#d97706' : '#334155',
           width: 14,
           height: 14,
         },
@@ -337,7 +337,7 @@ const AutomataCanvasInner: React.FC<AutomataCanvasProps> = ({
         )}
       </div>
 
-      <div className="w-full flex-1 min-h-[390px] h-[390px] bg-[#06080d] relative">
+      <div className="w-full flex-1 min-h-[390px] h-[390px] bg-slate-50 relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}

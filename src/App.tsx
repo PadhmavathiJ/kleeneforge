@@ -126,7 +126,7 @@ export function App() {
   }, [store.currentView]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#07090e] text-[#f1f5f9]">
+    <div className="min-h-screen flex flex-col bg-[#f7f9fc] text-slate-900">
       {/* Top Navigation Bar */}
       <Navbar />
 
@@ -152,7 +152,7 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="glass-panel border-t border-slate-900/80 px-4 py-8 mt-12 text-xs font-mono text-slate-500">
+      <footer className="bg-white border-t border-slate-300 px-4 py-8 mt-12 text-xs font-mono text-slate-600">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="space-y-1">
             <div className="font-bold text-slate-300 flex items-center justify-center sm:justify-start gap-2">

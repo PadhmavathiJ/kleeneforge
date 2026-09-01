@@ -81,12 +81,12 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
   };
 
   return (
-    <div className="w-full glass-panel border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+    <div className="w-full glass-panel border border-slate-300 rounded-2xl overflow-hidden shadow-sm">
       {/* Table Header Controls */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950/80 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-100 border-b border-slate-300">
         <div className="flex items-center gap-2">
           <TableIcon className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-mono font-bold text-slate-200">
+          <span className="text-sm font-mono font-bold text-slate-900">
             {automaton.type} Transition Table (d)
           </span>
         </div>
@@ -94,7 +94,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleCopyMarkdown}
-            className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-xs font-mono transition-all"
             title="Copy as Markdown"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -102,7 +102,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
           </button>
           <button
             onClick={handleDownloadCsv}
-            className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-xs font-mono transition-all"
             title="Download CSV"
           >
             <Download className="w-3.5 h-3.5 text-cyan-400" />
@@ -114,14 +114,14 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
       {/* Table Body */}
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-xs font-mono text-left">
-          <thead className="bg-slate-900/60 text-slate-400 border-b border-slate-800">
+          <thead className="bg-slate-200 text-slate-800 border-b border-slate-300">
             <tr>
               <th className="px-4 py-2 font-bold text-cyan-300">State / d</th>
               {columns.map(sym => (
                 <th
                   key={sym}
                   className={`px-4 py-2 font-bold text-center ${
-                    activeSymbol === sym ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-300'
+                    activeSymbol === sym ? 'bg-cyan-100 text-cyan-900' : 'text-slate-800'
                   }`}
                 >
                   {sym === 'e' ? 'e (Epsilon)' : sym}
@@ -129,7 +129,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-slate-200">
             {automaton.states.map(state => {
               const isStart = automaton.startState === state;
               const isAccept = automaton.acceptStates.includes(state);
@@ -139,7 +139,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
                 <tr
                   key={state}
                   className={`transition-colors ${
-                    isCurrentRow ? 'bg-cyan-500/15' : 'hover:bg-slate-900/40'
+                    isCurrentRow ? 'bg-cyan-100' : 'odd:bg-white even:bg-slate-50 hover:bg-slate-100'
                   }`}
                 >
                   <td className="px-4 py-2 font-bold flex items-center gap-1 text-slate-200">
@@ -157,7 +157,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
                         key={sym}
                         className={`px-4 py-2 text-center transition-all ${
                           isTargetCell
-                            ? 'bg-cyan-500/30 text-cyan-200 font-bold glow-cyan'
+                          ? 'bg-cyan-200 text-cyan-950 font-bold'
                             : reached.length === 0
                             ? 'text-slate-600'
                             : 'text-slate-300'
@@ -181,7 +181,7 @@ export const TransitionTableView: React.FC<TransitionTableViewProps> = ({
       </div>
 
       {/* Legend Footer */}
-      <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+      <div className="px-4 py-2 bg-slate-50 border-t border-slate-300 flex items-center justify-between text-[11px] font-mono text-slate-600">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <span className="text-cyan-400 font-bold">&rarr;</span> Start State

@@ -24,8 +24,8 @@ export const StateNode = memo(({ id, data, selected }: any) => {
 
       {/* Start State Indicator Arrow */}
       {isStart && (
-        <div className="absolute -left-7 top-1/2 -translate-y-1/2 flex items-center text-cyan-400 pointer-events-none drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
-          <span className="text-[9px] font-mono font-bold mr-0.5 text-cyan-300">START</span>
+        <div className="absolute -left-9 top-1/2 -translate-y-1/2 flex items-center text-cyan-700 pointer-events-none">
+          <span className="text-[10px] font-mono font-bold mr-0.5 text-cyan-800">START</span>
           <ArrowRight className="w-4 h-4 stroke-[3]" />
         </div>
       )}
@@ -34,17 +34,19 @@ export const StateNode = memo(({ id, data, selected }: any) => {
       <div
         className={`w-14 h-14 rounded-full flex items-center justify-center font-mono font-bold text-xs select-none transition-all duration-300 ${
           isActive
-            ? 'bg-cyan-500/25 border-2 border-cyan-400 text-cyan-200 shadow-[0_0_25px_rgba(6,182,212,0.8)] scale-110'
+            ? 'bg-cyan-100 border-[3px] border-cyan-700 text-slate-900 shadow-md scale-110'
             : selected
-            ? 'bg-slate-900 border-2 border-purple-400 text-purple-200 shadow-[0_0_20px_rgba(168,85,247,0.5)]'
-            : 'bg-slate-950/95 border-2 border-slate-700 hover:border-cyan-500/60 text-slate-200 shadow-lg'
+            ? 'bg-indigo-50 border-[3px] border-indigo-600 text-slate-900 shadow-md'
+            : isAccept
+            ? 'bg-emerald-50 border-[3px] border-emerald-600 hover:border-cyan-700 text-slate-900 shadow-sm'
+            : 'bg-white border-[3px] border-slate-500 hover:border-cyan-700 text-slate-900 shadow-sm'
         }`}
       >
         {/* Double circle ring for accepting states */}
         {isAccept && (
           <div
             className={`absolute inset-1 rounded-full border pointer-events-none ${
-              isActive ? 'border-cyan-300' : selected ? 'border-purple-400' : 'border-slate-500'
+              isActive ? 'border-cyan-700' : selected ? 'border-indigo-600' : 'border-emerald-700'
             }`}
           />
         )}

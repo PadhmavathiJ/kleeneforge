@@ -84,6 +84,12 @@ export interface MinimizationStep {
   distinguishedReason?: string;
   explanation: string;
   tableSnapshot?: { state: string; transitions: Record<string, string> }[];
+  /** Semantic animation data for the minimization laboratory. */
+  phase?: 'REACHABILITY' | 'INITIAL_PARTITION' | 'CHECK_TRANSITION' | 'SPLIT' | 'STABLE' | 'MERGE' | 'BUILD_STATE' | 'BUILD_TRANSITION' | 'VERIFY';
+  activeStateIds?: string[];
+  activeTransitions?: Transition[];
+  activeSymbol?: string;
+  destinationState?: string;
 }
 
 export interface MinimizationResult {

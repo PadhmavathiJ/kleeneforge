@@ -14,7 +14,6 @@ import {
   Upload,
   Image as ImageIcon,
   CheckCircle2,
-  AlertCircle,
   HelpCircle,
   Lightbulb,
   Zap,
@@ -200,17 +199,6 @@ export const KleeneMentor: React.FC = () => {
           Multimodal tutoring engine: Upload textbook questions, handwritten automata photos, and practice with Socratic dialogue.
         </p>
       </div>
-
-      {/* Professional API Configuration Notice */}
-      {!import.meta.env.VITE_GEMINI_API_KEY && (
-        <div className="glass-panel p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs font-mono text-amber-200">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold text-amber-300">Live AI Vision API Notice: </span>
-            <span>AI Tutor live cloud endpoint requires an API key. Add <code className="text-cyan-300">VITE_GEMINI_API_KEY</code> in <code className="text-cyan-300">.env</code> to enable live multimodal cloud vision. Running on local deterministic Socratic tutor engine.</span>
-          </div>
-        </div>
-      )}
 
       {/* Teaching Mode Switcher */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">

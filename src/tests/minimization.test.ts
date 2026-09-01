@@ -26,4 +26,14 @@ describe('DFA Minimization (Partition Refinement / Hopcroft)', () => {
     const minResult = minimizeDFA(dfa01);
     expect(minResult.minimalDfa.states.length).toBe(3);
   });
+
+  it('emits deterministic, algorithm-backed visual steps', () => {
+    const phases = minimizeDFA(textbookDfa).steps.map(step => step.phase);
+    expect(phases).toContain('REACHABILITY');
+    expect(phases).toContain('INITIAL_PARTITION');
+    expect(phases).toContain('CHECK_TRANSITION');
+    expect(phases).toContain('MERGE');
+    expect(phases).toContain('BUILD_TRANSITION');
+    expect(phases).toContain('VERIFY');
+  });
 });

@@ -99,3 +99,66 @@
   animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Presentation light theme.  Components keep their existing semantic utility
+   classes; these token-backed overrides make them consistently readable. */
+:root {
+  --kf-page: #f7f9fc;
+  --kf-surface: #ffffff;
+  --kf-surface-subtle: #f1f5f9;
+  --kf-text: #0f172a;
+  --kf-muted: #475569;
+  --kf-border: #cbd5e1;
+  --kf-primary: #0e7490;
+  --kf-primary-strong: #0f766e;
+  --kf-indigo: #4f46e5;
+  --kf-success: #059669;
+  --kf-warning: #b45309;
+  --kf-danger: #dc2626;
+}
+
+@layer base {
+  * { border-color: var(--kf-border); }
+  body { background: var(--kf-page); color: var(--kf-text); font-size: 16px; }
+  button, input, select, textarea { color: var(--kf-text); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgb(14 116 144 / 35%); outline-offset: 2px; }
+}
+
+::-webkit-scrollbar-track { background: #e2e8f0; }
+::-webkit-scrollbar-thumb { background: #94a3b8; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+.bg-grid-pattern { background-image: linear-gradient(to right, rgb(148 163 184 / 18%) 1px, transparent 1px), linear-gradient(to bottom, rgb(148 163 184 / 18%) 1px, transparent 1px); }
+.bg-dot-pattern { background-image: radial-gradient(rgb(14 116 144 / 22%) 1px, transparent 1px); }
+.glass-panel { background: var(--kf-surface); border: 1px solid var(--kf-border); box-shadow: 0 4px 14px rgb(15 23 42 / 8%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.glass-panel-hover:hover { background: #fff; border-color: #67b7c8; transform: translateY(-1px); box-shadow: 0 8px 20px rgb(15 23 42 / 10%); }
+.glow-cyan, .glow-purple, .glow-emerald, .glow-amber { box-shadow: 0 3px 10px rgb(15 23 42 / 12%); }
+
+/* Convert dark utility surfaces and low-contrast copy without changing markup. */
+[class*="bg-slate-950"], [class*="bg-slate-900"], [class*="bg-slate-800"], [class*="bg-[#06080d"], [class*="bg-[#07090e"], [class*="bg-[#080a0f"] { background-color: var(--kf-surface) !important; }
+[class*="bg-slate-700"], [class*="bg-slate-600"] { background-color: var(--kf-surface-subtle) !important; }
+[class*="text-white"], [class*="text-slate-100"], [class*="text-slate-200"], [class*="text-slate-300"], [class*="text-slate-400"], [class*="text-slate-500"], [class*="text-slate-600"] { color: var(--kf-text) !important; }
+[class*="border-slate-"], [class*="border-cyan-950"] { border-color: var(--kf-border) !important; }
+[class*="text-cyan-"] { color: var(--kf-primary) !important; }
+[class*="text-indigo-"] { color: var(--kf-indigo) !important; }
+[class*="text-emerald-"] { color: var(--kf-success) !important; }
+[class*="text-amber-"] { color: var(--kf-warning) !important; }
+[class*="text-rose-"] { color: var(--kf-danger) !important; }
+[class*="bg-cyan-500/"], [class*="bg-cyan-600/"] { background-color: rgb(14 116 144 / 10%) !important; }
+[class*="bg-indigo-500/"], [class*="bg-indigo-600/"] { background-color: rgb(79 70 229 / 9%) !important; }
+[class*="bg-emerald-500/"] { background-color: rgb(5 150 105 / 10%) !important; }
+[class*="bg-amber-500/"] { background-color: rgb(180 83 9 / 11%) !important; }
+[class*="bg-rose-500/"], [class*="bg-rose-950/"] { background-color: rgb(220 38 38 / 9%) !important; }
+
+/* Solid actions retain a clear, accessible hierarchy. */
+button[class*="bg-cyan-500"], button[class*="bg-cyan-600"] { background-color: var(--kf-primary) !important; color: #fff !important; border-color: var(--kf-primary) !important; }
+button[class*="bg-indigo-600"], button[class*="bg-indigo-500"] { background-color: var(--kf-indigo) !important; color: #fff !important; border-color: var(--kf-indigo) !important; }
+button[class*="bg-emerald-"], button[class*="bg-green-"] { background-color: var(--kf-success) !important; color: #fff !important; }
+button[class*="bg-rose-"] { background-color: var(--kf-danger) !important; color: #fff !important; }
+
+input, select, textarea { background: #fff !important; border-color: #94a3b8 !important; color: var(--kf-text) !important; }
+input::placeholder, textarea::placeholder { color: #64748b !important; }
+table { color: var(--kf-text); }
+.react-flow__handle { background: var(--kf-primary); border-color: #fff; }
+.react-flow__edge-path { stroke: #334155; stroke-width: 2.8; }
+.react-flow__edge-text { fill: #0f172a; font-weight: 700; }
+.react-flow__controls, .react-flow__minimap { border-color: var(--kf-border) !important; box-shadow: 0 2px 8px rgb(15 23 42 / 12%); }

@@ -12,7 +12,6 @@ import { validateAutomaton } from '../../core/validation';
 import { AUTOMATON_PRESETS } from '../../core/presets';
 import { AutomataCanvas } from '../canvas/AutomataCanvas';
 import { TransitionTableView } from '../pipeline/TransitionTableView';
-import { ReasoningPipeline } from '../pipeline/ReasoningPipeline';
 import { ExplanationCard } from '../pipeline/ExplanationCard';
 import { MathDisplay } from '../common/MathDisplay';
 import {
@@ -271,9 +270,6 @@ export const ConversionLab: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      {/* Reasoning Pipeline Timeline Bar */}
-      <ReasoningPipeline />
-
       {/* Top Configuration Bar */}
       <div className="glass-panel p-4 rounded-2xl border border-cyan-950/60 flex flex-wrap items-center justify-between gap-4 shadow-xl">
         <div className="flex flex-wrap items-center gap-3">

@@ -90,18 +90,62 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
   }
   const completeInput = completeDFA(dfa, alphabet);
 
-  // Step 1: Remove unreachable states
+  // Step 1: use the same deterministic BFS for the visible reachability flow.
+  const visited = new Set<string>([completeInput.startState]);
+  const queue = [completeInput.startState];
+  steps.push({
+    stepIndex: 1,
+    title: 'Reachability: start state',
+    phase: 'REACHABILITY',
+    partitions: [[completeInput.startState]],
+    activeStateIds: [completeInput.startState],
+    explanation: `Start at ${completeInput.startState}. Every state reached from here can affect the language.`,
+  });
+  while (queue.length) {
+    const state = queue.shift()!;
+    const outgoing = completeInput.transitions
+      .filter(t => t.from === state)
+      .sort((a, b) => a.symbol.localeCompare(b.symbol) || a.to.localeCompare(b.to));
+    for (const transition of outgoing) {
+      const isNew = !visited.has(transition.to);
+      if (isNew) { visited.add(transition.to); queue.push(transition.to); }
+      steps.push({
+        stepIndex: steps.length + 1,
+        title: 'Reachability: follow transition',
+        phase: 'REACHABILITY',
+        partitions: [[...visited]],
+        activeStateIds: [state, transition.to],
+        activeTransitions: [transition],
+        activeSymbol: transition.symbol,
+        destinationState: transition.to,
+        explanation: `${state} --${transition.symbol}--> ${transition.to}. ${isNew ? `${transition.to} is now reachable.` : `${transition.to} was already visited.`}`,
+      });
+    }
+  }
+
+  // Remove unreachable states after showing that traversal.
   const { reachableDfa, unreachableStates } = removeUnreachableStates(completeInput);
   const cleanStates = reachableDfa.states;
 
   steps.push({
-    stepIndex: 1,
+    stepIndex: steps.length + 1,
     title: 'Reachability Analysis',
+    phase: 'REACHABILITY',
     partitions: [cleanStates],
     explanation: unreachableStates.length > 0
       ? `Identified and eliminated ${unreachableStates.length} unreachable state(s): {${unreachableStates.join(', ')}}. Remaining reachable states: {${cleanStates.join(', ')}}.`
       : `All ${cleanStates.length} states are reachable from the start state '${dfa.startState}'.`,
   });
+  if (unreachableStates.length > 0) {
+    steps.push({
+      stepIndex: steps.length + 1,
+      title: 'Reachability: remove unreachable states',
+      phase: 'REACHABILITY',
+      partitions: [cleanStates, unreachableStates],
+      activeStateIds: unreachableStates,
+      explanation: `Remove {${unreachableStates.join(', ')}}: none can be reached from the start state.`,
+    });
+  }
 
   // Step 2: Initial Partition P0 = { F, Q \ F }
   const finalGroup = cleanStates.filter(s => reachableDfa.acceptStates.includes(s));
@@ -113,8 +157,10 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
   if (currentPartitions.length === 0) currentPartitions.push(cleanStates);
 
   steps.push({
-    stepIndex: 2,
+    stepIndex: steps.length + 1,
     title: 'Initial Partition (P0)',
+    phase: 'INITIAL_PARTITION',
+    activeStateIds: cleanStates,
     partitions: currentPartitions.map(p => [...p]),
     explanation: `P0 separates accepting final states F = {${finalGroup.join(', ') || '�'}} from non-accepting states Q \\ F = {${nonFinalGroup.join(', ') || '�'}}. (Strings of length 0 distinguish them).`,
   });
@@ -155,6 +201,18 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
         for (const sym of alphabet) {
           const target = getTransition(state, sym);
           const targetGroup = target !== null ? findGroupIndex(target, currentPartitions) : -1;
+          const transition = target === null ? undefined : reachableDfa.transitions.find(tr => tr.from === state && tr.symbol === sym);
+          steps.push({
+            stepIndex: steps.length + 1,
+            title: `Check ${state} on '${sym}'`,
+            phase: 'CHECK_TRANSITION',
+            partitions: currentPartitions.map(p => [...p]),
+            activeStateIds: target ? [state, target] : [state],
+            activeTransitions: transition ? [transition] : [],
+            activeSymbol: sym,
+            destinationState: target ?? undefined,
+            explanation: `${state} on '${sym}' reaches ${target ?? 'no state'}, in partition G${targetGroup + 1}. Equivalent states must reach the same partition for every symbol.`,
+          });
           sigParts.push(`${sym}->G${targetGroup}`);
         }
         const sig = sigParts.join('|');
@@ -181,6 +239,15 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
           .map(([sig, stList]) => `{${stList.join(', ')}} (transitions: ${sig})`)
           .join(' vs ');
         splitReasons.push(`Group {${group.join(', ')}} split into: ${splitDesc}`);
+        steps.push({
+          stepIndex: steps.length + 1,
+          title: `Split group {${group.join(', ')}}`,
+          phase: 'SPLIT',
+          partitions: [...newPartitions.map(p => [...p]), ...currentPartitions.slice(gIdx + 1).map(p => [...p])],
+          activeStateIds: group,
+          distinguishedReason: splitDesc,
+          explanation: `Different transition signatures distinguish this group, so it becomes ${subGroups.map(sub => `{${sub.join(', ')}}`).join(' and ')}.`,
+        });
       }
     }
 
@@ -189,6 +256,7 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
     steps.push({
       stepIndex: steps.length + 1,
       title: `Partition Refinement (P${iteration})`,
+      phase: partitionChanged ? 'SPLIT' : 'STABLE',
       partitions: currentPartitions.map(p => [...p]),
       distinguishedReason: splitReasons.join('\n'),
       explanation: partitionChanged
@@ -209,6 +277,20 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
     equivalenceClasses[label] = group;
     return label;
   });
+
+  for (const group of finalPartitions) {
+    const label = stateToGroupMap.get(group[0])!;
+    steps.push({
+      stepIndex: steps.length + 1,
+      title: `Merge class ${label}`,
+      phase: 'MERGE',
+      partitions: finalPartitions.map(p => [...p]),
+      activeStateIds: group,
+      explanation: group.length > 1
+        ? `The equivalent states {${group.join(', ')}} merge into one minimal state ${label}.`
+        : `${group[0]} already forms a single minimal state.`,
+    });
+  }
 
   const minStartState = stateToGroupMap.get(reachableDfa.startState)!;
   const minAcceptStates = Array.from(
@@ -253,11 +335,34 @@ export function minimizeDFA(dfa: Automaton): MinimizationResult {
     description: `Minimized DFA (${dfa.states.length} states -> ${minStateNames.length} states)`,
   };
 
+  for (const state of minimalDfa.states) {
+    steps.push({
+      stepIndex: steps.length + 1,
+      title: `Build minimal state ${state}`,
+      phase: 'BUILD_STATE',
+      partitions: finalPartitions.map(p => [...p]),
+      activeStateIds: equivalenceClasses[state],
+      explanation: `Add ${state} to the minimized DFA.`,
+    });
+  }
+  for (const transition of minimalDfa.transitions) {
+    steps.push({
+      stepIndex: steps.length + 1,
+      title: `Build ${transition.from} --${transition.symbol}--> ${transition.to}`,
+      phase: 'BUILD_TRANSITION',
+      partitions: finalPartitions.map(p => [...p]),
+      activeTransitions: [transition],
+      activeSymbol: transition.symbol,
+      explanation: `Add this transition using any representative of the source equivalence class.`,
+    });
+  }
+
   steps.push({
     stepIndex: steps.length + 1,
     title: 'Minimal DFA Construction',
+    phase: 'VERIFY',
     partitions: finalPartitions,
-    explanation: `Merged equivalent states into ${minStateNames.length} equivalence class(es): ${minStateNames.join(', ')}. Final transition table and graph constructed.`,
+    explanation: `Merged equivalent states into ${minStateNames.length} equivalence class(es): ${minStateNames.join(', ')}. The original and minimized DFA are equivalent.`,
   });
 
   return {
