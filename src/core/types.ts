@@ -180,6 +180,7 @@ export interface EquivalenceResult {
   shortestCounterexample?: string;
   acceptedByA?: boolean;
   acceptedByB?: boolean;
+  divergencePair?: { stateA: string; stateB: string };
   stateCountA: number;
   stateCountB: number;
   explanation: string;

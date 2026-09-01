@@ -20,6 +20,7 @@ describe('Automata Equivalence & Shortest Counterexample BFS', () => {
     const eq = checkAutomataEquivalence(dfa01, dfaMod3);
     expect(eq.areEquivalent).toBe(false);
     expect(eq.shortestCounterexample).toBeDefined();
+    expect(eq.divergencePair).toBeDefined();
   });
 
   it('should provide actionable feedback on student mistakes', () => {

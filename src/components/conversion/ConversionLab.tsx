@@ -7,6 +7,7 @@ import { convertAutomatonToRegex } from '../../core/regex/gnfa';
 import { regexToENFA } from '../../core/regex/thompson';
 import { checkAutomataEquivalence } from '../../core/equivalence';
 import { simulateAutomaton } from '../../core/simulation';
+import { convertDfaToNfa } from '../../core/identityConversions';
 import { AUTOMATON_PRESETS } from '../../core/presets';
 import { AutomataCanvas } from '../canvas/AutomataCanvas';
 import { TransitionTableView } from '../pipeline/TransitionTableView';
@@ -32,7 +33,7 @@ export const ConversionLab: React.FC = () => {
   const [store, actions] = useAppStore();
 
   const [sourceType, setSourceType] = useState<'NFA' | 'ENFA' | 'DFA' | 'REGEX'>('NFA');
-  const [targetType, setTargetType] = useState<'DFA' | 'MINIMAL_DFA' | 'REGEX' | 'ENFA'>('DFA');
+  const [targetType, setTargetType] = useState<'DFA' | 'NFA' | 'MINIMAL_DFA' | 'REGEX' | 'ENFA'>('DFA');
   const [regexInput, setRegexInput] = useState('(0|1)*01');
   const [testInput, setTestInput] = useState('01');
   const [viewMode, setViewMode] = useState<'side_by_side' | 'graph_only' | 'table_only'>('side_by_side');
@@ -113,6 +114,23 @@ export const ConversionLab: React.FC = () => {
             explanation: s.explanation,
             activeStates: [s.dfaStateName, s.targetDfaStateName],
           })),
+          isEquivalent: eq.areEquivalent,
+        };
+      }
+
+      if (targetType === 'NFA') {
+        const resultAut = convertDfaToNfa(store.currentAutomaton);
+        const eq = checkAutomataEquivalence(store.currentAutomaton, resultAut);
+        return {
+          type: 'DFA_TO_NFA_IDENTITY',
+          originalAut: store.currentAutomaton,
+          resultAut,
+          steps: [{
+            index: 0,
+            title: 'Identity conversion: DFA is already an NFA',
+            explanation: 'Keep Q, Σ, q₀, F, and every transition unchanged. In the NFA transition relation, each DFA destination is represented by a singleton destination set, so δ_NFA(q, a) = {δ_DFA(q, a)}.',
+            activeStates: store.currentAutomaton.states,
+          }],
           isEquivalent: eq.areEquivalent,
         };
       }
@@ -250,7 +268,7 @@ export const ConversionLab: React.FC = () => {
               onChange={e => {
                 const val = e.target.value as any;
                 setSourceType(val);
-                setTargetType(val === 'REGEX' ? 'ENFA' : val === 'DFA' ? 'MINIMAL_DFA' : 'DFA');
+                setTargetType(val === 'REGEX' ? 'ENFA' : val === 'DFA' ? 'NFA' : 'DFA');
                 setCurrentStepIndex(0);
               }}
               className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
@@ -277,6 +295,7 @@ export const ConversionLab: React.FC = () => {
               className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-purple-300 focus:outline-none focus:border-purple-500 cursor-pointer"
             >
               {(sourceType === 'REGEX' || sourceType === 'NFA' || sourceType === 'ENFA') && <option value="DFA">DFA</option>}
+              {sourceType === 'DFA' && <option value="NFA">NFA</option>}
               {sourceType === 'DFA' && <option value="MINIMAL_DFA">Minimal DFA</option>}
               {sourceType !== 'REGEX' && <option value="REGEX">Regular Expression</option>}
               {sourceType === 'REGEX' && <option value="ENFA">ε-NFA</option>}

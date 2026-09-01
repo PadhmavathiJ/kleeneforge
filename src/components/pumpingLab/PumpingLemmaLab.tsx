@@ -250,14 +250,13 @@ export const PumpingLemmaLab: React.FC = () => {
 
                 <div className="p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-2">
                   <div className="text-xs font-mono font-bold text-emerald-300">
-                    Contradiction Derived:
+                    Case analysis (not a conclusion yet):
                   </div>
                   <p className="text-xs text-slate-200">
-                    For i = {chosenI}, the pumped string violates the language structure because the counts no longer match.
-                    Since <MathDisplay math={`xy^{${chosenI}}z \\notin L`} />, the initial assumption that L is regular must be FALSE.
+                    A favorable decomposition alone does not prove non-regularity. A valid proof must use this pumping strategy to defeat every decomposition satisfying the two adversarial constraints.
                   </p>
                   <div className="font-mono text-xs text-cyan-300 font-bold">
-                    ∴ {selectedLang.name} is PROVED NON-REGULAR. ∎
+                    Only state the non-regularity conclusion after every listed adversarial case has been justified.
                   </div>
                 </div>
 

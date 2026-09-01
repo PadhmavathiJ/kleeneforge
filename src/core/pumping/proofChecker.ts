@@ -150,7 +150,7 @@ export function checkPumpingProof(input: ProofCheckInput): ProofCheckOutput {
       pumpedString,
       checks,
       verdict: 'CONTRADICTION_PROVED',
-      explanation: `? Valid proof step! For decomposition w = "${x}" + "${y}" + "${z}" and i = ${i}, the pumped string "${pumpedString}" does not belong to L. Since the Pumping Lemma asserted xy^${i}z ? L for all i = 0, this contradiction proves L is NOT regular.`,
+      explanation: `Valid contradiction for this decomposition: xy^${i}z = "${pumpedString}" is not in L. This is one required case, not a complete non-regularity proof by itself: a full pumping-lemma proof must defeat every decomposition satisfying |xy| <= p and |y| >= 1.`,
     };
   }
 

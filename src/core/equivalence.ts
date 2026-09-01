@@ -78,6 +78,7 @@ export function checkAutomataEquivalence(
   let counterexample: string | null = null;
   let counterAccA = false;
   let counterAccB = false;
+  let divergencePair: { stateA: string; stateB: string } | undefined;
 
   while (queue.length > 0) {
     const { stateA, stateB, path } = queue.shift()!;
@@ -90,6 +91,7 @@ export function checkAutomataEquivalence(
       counterexample = path;
       counterAccA = isAccA;
       counterAccB = isAccB;
+      divergencePair = { stateA, stateB };
       break;
     }
 
@@ -119,6 +121,7 @@ export function checkAutomataEquivalence(
       shortestCounterexample: counterexample,
       acceptedByA: counterAccA,
       acceptedByB: counterAccB,
+      divergencePair,
       stateCountA: autA.states.length,
       stateCountB: autB.states.length,
       explanation: `Automata are NOT equivalent. The shortest distinguishing counterexample string is ${displayStr}. Automaton A ${counterAccA ? 'ACCEPTS' : 'REJECTS'} this string, while Automaton B ${counterAccB ? 'ACCEPTS' : 'REJECTS'} it.`,
@@ -159,11 +162,9 @@ export function checkStudentAnswer(
   const refSim = simulateAutomaton(referenceAut, ce);
 
   // Pinpoint where student automaton diverged
-  let divergenceState = 'Start';
-  if (studentSim.steps.length > 0) {
-    const lastStep = studentSim.steps[studentSim.steps.length - 1];
-    divergenceState = `{${lastStep.currentStates.join(', ')}}`;
-  }
+  const divergenceState = eq.divergencePair
+    ? `product pair (student ${eq.divergencePair.stateA}, expected ${eq.divergencePair.stateB})`
+    : 'the initial product state';
 
   const ceText = ce === '' ? 'e' : `"${ce}"`;
   const expectedVerdict = refSim.accepted ? 'ACCEPT' : 'REJECT';

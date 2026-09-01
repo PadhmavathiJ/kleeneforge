@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { parseRegex } from '../../core/regex/parser';
+import { tokenizeRegex } from '../../core/regex/tokenizer';
 import { regexToENFA } from '../../core/regex/thompson';
 import { convertNfaToDfa } from '../../core/subsetConstruction';
 import { minimizeDFA } from '../../core/minimization';
@@ -100,6 +101,7 @@ export const RegexLab: React.FC = () => {
 
       return {
         ast,
+        tokens: tokenizeRegex(pattern).filter(token => token.type !== 'EOF'),
         enfa,
         dfa,
         minDfa,
@@ -109,6 +111,7 @@ export const RegexLab: React.FC = () => {
     } catch (err: any) {
       return {
         ast: null,
+        tokens: [],
         enfa: null,
         dfa: null,
         minDfa: null,
@@ -117,6 +120,14 @@ export const RegexLab: React.FC = () => {
       };
     }
   }, [pattern]);
+
+  const activeAutomaton = activePipelineTab === 'ENFA'
+    ? pipeline.enfa
+    : activePipelineTab === 'DFA'
+      ? pipeline.dfa
+      : activePipelineTab === 'MIN_DFA'
+        ? pipeline.minDfa
+        : null;
 
   // Test string against generated automaton
   const simResult = useMemo(() => {
@@ -167,6 +178,15 @@ export const RegexLab: React.FC = () => {
         {pipeline.error && (
           <div className="p-3 bg-rose-950/40 border border-rose-800 rounded-xl text-rose-300 text-xs font-mono">
             {pipeline.error}
+          </div>
+        )}
+
+        {!pipeline.error && (
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+            <span className="text-slate-400">Tokens:</span>
+            {pipeline.tokens.map((token, index) => (
+              <span key={`${token.position}-${index}`} className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-cyan-200">{token.type}: {token.value || 'ε'}</span>
+            ))}
           </div>
         )}
       </div>
@@ -229,7 +249,15 @@ export const RegexLab: React.FC = () => {
           )}
 
           {activePipelineTab === 'ENFA' && pipeline.enfa && (
-            <AutomataCanvas automaton={pipeline.enfa} readOnly title="Thompson e-NFA" />
+            <>
+              <AutomataCanvas automaton={pipeline.enfa} readOnly title="Thompson e-NFA" />
+              <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2 text-xs font-mono">
+                <div className="font-bold text-purple-300">Thompson construction fragments</div>
+                <ol className="space-y-1 text-slate-300">
+                  {pipeline.thompsonSteps.map(step => <li key={step.stepIndex}><span className="text-cyan-300">{step.stepIndex}.</span> {step.explanation}</li>)}
+                </ol>
+              </div>
+            </>
           )}
 
           {activePipelineTab === 'DFA' && pipeline.dfa && (
@@ -284,7 +312,7 @@ export const RegexLab: React.FC = () => {
           </div>
 
           {/* Transition Table */}
-          {pipeline.minDfa && <TransitionTableView automaton={pipeline.minDfa} />}
+          {activeAutomaton && <TransitionTableView automaton={activeAutomaton} />}
         </div>
       </div>
     </div>
