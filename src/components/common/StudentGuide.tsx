@@ -15,5 +15,12 @@ const guides: Partial<Record<AppView, { what: string; do: string; how: string; m
 export function StudentGuide({ view }: { view: AppView }) {
   const guide = guides[view];
   if (!guide) return null;
-  return <section className="max-w-7xl mx-auto px-4 pt-4"><div className="rounded-xl border border-cyan-900/60 bg-cyan-950/20 p-3 text-xs leading-relaxed"><p><b className="text-cyan-300">What is this?</b> {guide.what} <b className="ml-2 text-cyan-300">What to do:</b> {guide.do}</p><p className="mt-1 text-slate-300"><b className="text-purple-300">How it works:</b> {guide.how} <b className="ml-2 text-amber-300">Common mistake:</b> {guide.mistake} <b className="ml-2 text-emerald-300">Exam tip:</b> {guide.tip}</p></div></section>;
+  const items = [
+    { label: 'What is this?', text: guide.what, tone: 'text-teal-800' },
+    { label: 'What to do', text: guide.do, tone: 'text-blue-800' },
+    { label: 'How it works', text: guide.how, tone: 'text-indigo-800' },
+    { label: 'Common mistake', text: guide.mistake, tone: 'text-amber-800' },
+    { label: 'Exam tip', text: guide.tip, tone: 'text-emerald-800' },
+  ];
+  return <section className="max-w-7xl mx-auto px-4 pt-4"><div className="rounded-xl border border-slate-300 bg-slate-50 p-4 shadow-sm"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{items.map(item => <div key={item.label} className="min-w-0"><b className={`block mb-1 text-xs font-semibold ${item.tone}`}>{item.label}</b><p className="text-xs leading-relaxed text-slate-700">{item.text}</p></div>)}</div></div></section>;
 }

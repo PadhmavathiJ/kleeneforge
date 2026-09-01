@@ -1,6 +1,6 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { Automaton } from '../../core/types';
+import { Automaton, SubsetConstructionStep } from '../../core/types';
 import { convertNfaToDfa } from '../../core/subsetConstruction';
 import { minimizeDFA } from '../../core/minimization';
 import { convertAutomatonToRegex } from '../../core/regex/gnfa';
@@ -28,6 +28,51 @@ import {
   Columns,
   Cpu,
 } from 'lucide-react';
+
+const subsetLabel = (states: string[]) => states.length ? `{${states.join(', ')}}` : '∅';
+
+const cleanVisibleText = (text: string) => text
+  .replaceAll('ï¿½', '∅')
+  .replaceAll('Îµ', 'ε')
+  .replaceAll('â†’', '→')
+  .replaceAll('âˆ…', '∅');
+
+const subsetExplanation = (step: SubsetConstructionStep) => {
+  const source = subsetLabel(step.nfaSubset);
+  const moved = subsetLabel(step.moveSet);
+  const target = subsetLabel(step.targetNfaSubset);
+  const targetDescription = step.targetNfaSubset.length === 0
+    ? 'No NFA state is reachable, so this is the TRAP state.'
+    : `This gives subset ${target}.`;
+  const acceptance = step.targetNfaSubset.length > 0
+    ? 'It is accepting only if this subset contains an original final NFA state.'
+    : 'TRAP is not accepting because it contains no final NFA state.';
+  return {
+    beginnerText: [
+      'WHAT ARE WE CHECKING?',
+      `Checking DFA state ${step.dfaStateName} (which represents ${source}) on input '${step.symbol}'.`,
+      '',
+      'WHAT HAPPENS?',
+      step.moveSet.length ? `On '${step.symbol}', the represented NFA state(s) can reach ${moved}.` : `There is no transition on '${step.symbol}' from the represented NFA state(s).`,
+      '',
+      'WHAT NEW STATE DOES THIS CREATE?',
+      `${targetDescription} It is named ${step.targetDfaStateName}${step.isNewState ? ' because this subset is new.' : ' because we have seen this subset before.'}`,
+      acceptance,
+      '',
+      'RESULT',
+      `${step.dfaStateName} --${step.symbol}--> ${step.targetDfaStateName}`,
+    ].join('\n'),
+    mathText: [
+      `Current subset: ${source}`,
+      `move(${source}, ${step.symbol}) = ${moved}`,
+      `ε-closure(${moved}) = ${target}`,
+      `δ_DFA(${step.dfaStateName}, ${step.symbol}) = ${step.targetDfaStateName}`,
+    ].join('\n'),
+    examShortcutText: step.targetNfaSubset.length
+      ? `${source} on '${step.symbol}' → ${target} → ${step.targetDfaStateName}.`
+      : `No move on '${step.symbol}' → empty subset → TRAP.`,
+  };
+};
 
 export const ConversionLab: React.FC = () => {
   const [store, actions] = useAppStore();
@@ -80,7 +125,8 @@ export const ConversionLab: React.FC = () => {
             steps: subsetRes.steps.map((s, i) => ({
               index: i,
               title: `DFA State: ${s.dfaStateName} on '${s.symbol}'`,
-              explanation: s.explanation,
+              explanation: cleanVisibleText(s.explanation),
+              ...subsetExplanation(s),
               activeStates: [s.dfaStateName],
             })),
             isEquivalent: true,
@@ -113,8 +159,9 @@ export const ConversionLab: React.FC = () => {
           resultAut: res.dfa,
           steps: res.steps.map((s, i) => ({
             index: i,
-            title: `Process Subset δ(${s.dfaStateName}, '${s.symbol}') -> ${s.targetDfaStateName}`,
-            explanation: s.explanation,
+            title: `Read '${s.symbol}' from DFA state ${s.dfaStateName}`,
+            explanation: cleanVisibleText(s.explanation),
+            ...subsetExplanation(s),
             activeStates: [s.dfaStateName, s.targetDfaStateName],
           })),
           isEquivalent: eq.areEquivalent,
@@ -191,8 +238,9 @@ export const ConversionLab: React.FC = () => {
         resultAut: res.dfa,
         steps: res.steps.map((s, i) => ({
           index: i,
-          title: `δ(${s.dfaStateName}, '${s.symbol}')`,
-          explanation: s.explanation,
+          title: `Read '${s.symbol}' from DFA state ${s.dfaStateName}`,
+          explanation: cleanVisibleText(s.explanation),
+          ...subsetExplanation(s),
           activeStates: [s.dfaStateName],
         })),
         isEquivalent: true,
@@ -209,6 +257,11 @@ export const ConversionLab: React.FC = () => {
 
   const totalSteps = conversionData.steps ? conversionData.steps.length : 0;
   const currentStep = conversionData.steps && conversionData.steps[currentStepIndex];
+  const currentStepText = currentStep as (typeof currentStep & {
+    beginnerText?: string;
+    mathText?: string;
+    examShortcutText?: string;
+  }) | undefined;
   const sourceMembership = conversionData.originalAut
     ? simulateAutomaton(conversionData.originalAut, testInput)
     : undefined;
@@ -514,9 +567,9 @@ export const ConversionLab: React.FC = () => {
           {currentStep && (
             <ExplanationCard
               title={`Reasoning for Step ${currentStepIndex + 1}: ${currentStep.title}`}
-              beginnerText={currentStep.explanation}
-              mathText={`δ_{DFA}(S, a) = \\bigcup_{q \\in S} \\varepsilon\\text{-closure}(\\delta_{NFA}(q, a))\n\n${currentStep.explanation}`}
-              examShortcutText="GATE Shortcut: Track only reachable subsets. Do not construct all 2^n subsets if they cannot be reached from the start state."
+              beginnerText={currentStepText?.beginnerText || cleanVisibleText(currentStep.explanation)}
+              mathText={currentStepText?.mathText || `δ_DFA(S, a) = ⋃_{q ∈ S} ε-closure(δ_NFA(q, a))\n\n${cleanVisibleText(currentStep.explanation)}`}
+              examShortcutText={currentStepText?.examShortcutText || 'Track only reachable subsets. Do not construct subsets that the start state cannot reach.'}
             />
           )}
 
