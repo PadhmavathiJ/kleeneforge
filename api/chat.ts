@@ -28,7 +28,7 @@ export default async function handler(req: any, res: any) {
   if (!key) return res.status(503).json({ error: 'AI Tutor is currently unavailable.' });
   const { message, history = [], mode = 'TEACH_ME', level = 'Beginner', image } = req.body || {};
   if (typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'A message is required.' });
-  if (!Object.hasOwn(modeInstructions, mode) || !Array.isArray(history)) return res.status(400).json({ error: 'Invalid tutor request.' });
+  if (!Object.prototype.hasOwnProperty.call(modeInstructions, mode) || !Array.isArray(history)) return res.status(400).json({ error: 'Invalid tutor request.' });
   const attachment = image === undefined ? null : typeof image === 'string' ? imagePart(image) : null;
   if (image !== undefined && !attachment) return res.status(400).json({ error: 'That image format is not supported. Please use PNG, JPEG, WebP, or GIF.' });
   const contents = [
