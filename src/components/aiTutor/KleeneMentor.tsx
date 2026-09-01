@@ -56,7 +56,7 @@ export const KleeneMentor: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle Send Message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputQuery.trim()) return;
 
@@ -71,6 +71,22 @@ export const KleeneMentor: React.FC = () => {
 
     setMessages(prev => [...prev, newMsg]);
     setAvatarMood('thinking');
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText, history: messages.map(({ sender, text }) => ({ sender, text })), mode: tutorMode, level: store.userLevel }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Tutor request failed.');
+      setMessages(prev => [...prev, { id: `tutor_${Date.now()}`, sender: 'tutor', text: data.reply }]);
+      setAvatarMood('explaining');
+    } catch (error) {
+      setMessages(prev => [...prev, { id: `tutor_error_${Date.now()}`, sender: 'tutor', text: error instanceof Error ? error.message : 'Unable to contact the tutor. Please retry.' }]);
+      setAvatarMood('questioning');
+    }
+    return;
 
     // Simulate Socratic AI tutor responses deterministically based on topic
     setTimeout(() => {
@@ -119,6 +135,9 @@ export const KleeneMentor: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setMessages(prev => [...prev, { id: `image_notice_${Date.now()}`, sender: 'tutor', text: 'Image analysis is not enabled yet. Please describe the diagram or paste its transitions; text chat is available now.' }]);
+    return;
+
     const reader = new FileReader();
     reader.onload = () => {
       const b64 = reader.result as string;
@@ -155,7 +174,9 @@ export const KleeneMentor: React.FC = () => {
         ]);
       }, 1500);
     };
-    reader.readAsDataURL(file);
+    const fileToRead = e.currentTarget.files?.item(0);
+    if (!fileToRead) return;
+    reader.readAsDataURL(fileToRead as File);
   };
 
   return (

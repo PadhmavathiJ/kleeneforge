@@ -17,6 +17,7 @@ import { EquivalenceChecker } from './components/verification/EquivalenceChecker
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { MistakeNotebook } from './components/analytics/MistakeNotebook';
 import { FlashReview } from './components/analytics/FlashReview';
+import { StudentGuide } from './components/common/StudentGuide';
 import {
   ShieldCheck,
   Zap,
@@ -131,6 +132,7 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
+        <StudentGuide view={store.currentView} />
         {store.currentView === 'HERO' && <HeroSection />}
         {store.currentView === 'MODE_SELECT' && <ModeSelector />}
         {store.currentView === 'CONVERT' && <ConversionLab />}

@@ -5,6 +5,7 @@ import { parseRegex } from '../../core/regex/parser';
 import { regexToENFA } from '../../core/regex/thompson';
 import { convertNfaToDfa } from '../../core/subsetConstruction';
 import { minimizeDFA } from '../../core/minimization';
+import { Automaton } from '../../core/types';
 import { AutomataCanvas } from '../canvas/AutomataCanvas';
 import {
   Sparkles,
@@ -31,9 +32,31 @@ const SAMPLE_PROGRAMS = [
   },
 ];
 
+const examplesFor = (type: string) => type === 'IDENTIFIER'
+  ? { valid: ['total', '_count', 'item2'], invalid: ['2items', 'total-name'] }
+  : type === 'INTEGER'
+    ? { valid: ['0', '10', '2048'], invalid: ['3.14', '12a'] }
+    : type === 'KEYWORD'
+      ? { valid: ['int', 'while', 'return'], invalid: ['integer', 'returns'] }
+      : { valid: ['+', '==', '='], invalid: ['abc', '@'] };
+
+function teachingDfa(type: string): Automaton {
+  const identifier = type === 'IDENTIFIER';
+  const integer = type === 'INTEGER';
+  const states = identifier ? ['START', 'IDENTIFIER', 'TRAP'] : integer ? ['START', 'INTEGER', 'TRAP'] : ['START', 'ACCEPT', 'TRAP'];
+  const accept = identifier ? 'IDENTIFIER' : integer ? 'INTEGER' : 'ACCEPT';
+  const first = identifier ? 'letter/_' : integer ? 'digit' : 'valid token character';
+  const repeat = identifier ? 'letter/digit/_' : integer ? 'digit' : 'token ends';
+  return { type: 'DFA', states, alphabet: [first, repeat, 'other'], startState: 'START', acceptStates: [accept], transitions: [
+    { from: 'START', to: accept, symbol: first }, { from: 'START', to: 'TRAP', symbol: 'other' },
+    { from: accept, to: accept, symbol: repeat }, { from: accept, to: 'TRAP', symbol: 'other' }, { from: 'TRAP', to: 'TRAP', symbol: 'other' },
+  ] };
+}
+
 export const LexicalLab: React.FC = () => {
   const [sourceCode, setSourceCode] = useState(SAMPLE_PROGRAMS[0].code);
   const [selectedTokenRule, setSelectedTokenRule] = useState<string>('IDENTIFIER');
+  const [sampleLexeme, setSampleLexeme] = useState('total');
 
   // Tokenize source code live
   const lexResult = useMemo(() => {
@@ -42,25 +65,9 @@ export const LexicalLab: React.FC = () => {
 
   // Build DFA for the selected token rule
   const selectedRule = STANDARD_LEXER_RULES.find(r => r.tokenType === selectedTokenRule)!;
-  const tokenAutomaton = useMemo(() => {
-    try {
-      // Simplified regex for visual DFA display
-      const simpleRegex =
-        selectedRule.tokenType === 'IDENTIFIER'
-          ? '(a|b|c|d|e|f|g|_)(a|b|c|d|e|f|g|_|0|1|2)*'
-          : selectedRule.tokenType === 'INTEGER'
-          ? '(0|1|2|3|4|5|6|7|8|9)+'
-          : selectedRule.tokenType === 'FLOAT'
-          ? '(0|1|2|3)+.(0|1|2|3)+'
-          : 'i.f|e.l.s.e|w.h.i.l.e';
-
-      const enfa = regexToENFA(simpleRegex).automaton;
-      const dfa = convertNfaToDfa(enfa).dfa;
-      return minimizeDFA(dfa).minimalDfa;
-    } catch {
-      return null;
-    }
-  }, [selectedRule]);
+  const tokenAutomaton = useMemo(() => teachingDfa(selectedRule.tokenType), [selectedRule.tokenType]);
+  const lexemeAccepted = useMemo(() => new RegExp(`^(?:${selectedRule.regex})$`).test(sampleLexeme), [selectedRule, sampleLexeme]);
+  const examples = examplesFor(selectedRule.tokenType);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -161,24 +168,23 @@ export const LexicalLab: React.FC = () => {
             </div>
 
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-xs font-mono">
-              <div className="text-slate-400">Formal Token Specification Regex:</div>
+              <div className="text-slate-400">Regex rule:</div>
               <div className="text-cyan-300 font-bold break-all">{selectedRule.regex}</div>
-              <p className="text-[11px] text-slate-400 pt-1 font-sans">{selectedRule.description}</p>
+              <p className="text-[11px] text-slate-300 pt-1 font-sans"><b>In plain English:</b> {selectedRule.description}</p>
+              <div className="text-[11px] text-slate-400">Valid: {examples.valid.join(', ')} &nbsp; • &nbsp; Not valid: {examples.invalid.join(', ')}</div>
             </div>
 
-            {/* Token Recognition DFA */}
-            {tokenAutomaton && (
-              <div className="space-y-2">
-                <span className="text-xs font-mono font-bold text-slate-300">
-                  Compiled Scanner DFA ({tokenAutomaton.states.length} states):
-                </span>
-                <AutomataCanvas
-                  automaton={tokenAutomaton}
-                  readOnly
-                  title={`${selectedRule.tokenType} Scanner DFA`}
-                />
+            <div className="space-y-3">
+              <div className="text-xs font-mono font-bold text-slate-300">Simple teaching DFA</div>
+              <p className="text-[11px] text-slate-400">START means no valid character has been read. The accepting state means the lexeme may end now. TRAP means this token rule can no longer match.</p>
+              <AutomataCanvas automaton={tokenAutomaton} readOnly title={`${selectedRule.tokenType}: START → ACCEPT or TRAP`} />
+              <div className="rounded-xl border border-cyan-900/60 bg-cyan-950/20 p-3 space-y-2">
+                <label className="block text-xs font-mono font-bold text-cyan-300">Try a lexeme</label>
+                <input value={sampleLexeme} onChange={e => setSampleLexeme(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100" placeholder="Enter one token" />
+                <div className={`text-center rounded-lg p-3 font-mono font-bold ${lexemeAccepted ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>{lexemeAccepted ? 'ACCEPTED' : 'REJECTED'}</div>
+                <p className="text-[11px] text-slate-300">{lexemeAccepted ? `“${sampleLexeme}” matches the ${selectedRule.tokenType} rule and can finish in an accepting state.` : `“${sampleLexeme}” does not match the complete ${selectedRule.tokenType} rule; it would reach TRAP or end in a non-accepting state.`}</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
