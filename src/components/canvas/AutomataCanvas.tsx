@@ -437,9 +437,43 @@ const AutomataCanvasInner: React.FC<AutomataCanvasProps> = ({
 };
 
 export const AutomataCanvas: React.FC<AutomataCanvasProps> = (props) => {
+  // Error boundary to prevent crashes in heavy third-party rendering
+  class CanvasErrorBoundary extends React.Component<{ children?: React.ReactNode }, { hasError: boolean; error?: any }> {
+    constructor(props: any) {
+      super(props);
+      this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(err: any) {
+      return { hasError: true, error: err };
+    }
+
+    componentDidCatch(error: any, info: any) {
+      // Could report to telemetry here
+      // console.error('AutomataCanvas render error', error, info);
+    }
+
+    render() {
+      if (this.state.hasError) {
+        return (
+          <div className="w-full h-[450px] min-h-[450px] rounded-2xl glass-panel border border-rose-900/60 overflow-hidden flex items-center justify-center text-center p-6">
+            <div>
+              <div className="text-rose-300 font-bold mb-2">Canvas Load Error</div>
+              <div className="text-xs text-slate-400">An error occurred while rendering the interactive canvas. Try reloading the page or check the console for details.</div>
+            </div>
+          </div>
+        );
+      }
+
+      return this.props.children as any;
+    }
+  }
+
   return (
     <ReactFlowProvider>
-      <AutomataCanvasInner {...props} />
+      <CanvasErrorBoundary>
+        <AutomataCanvasInner {...props} />
+      </CanvasErrorBoundary>
     </ReactFlowProvider>
   );
 };
