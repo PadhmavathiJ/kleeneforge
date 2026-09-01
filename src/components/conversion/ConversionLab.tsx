@@ -8,6 +8,7 @@ import { regexToENFA } from '../../core/regex/thompson';
 import { checkAutomataEquivalence } from '../../core/equivalence';
 import { simulateAutomaton } from '../../core/simulation';
 import { convertDfaToNfa } from '../../core/identityConversions';
+import { validateAutomaton } from '../../core/validation';
 import { AUTOMATON_PRESETS } from '../../core/presets';
 import { AutomataCanvas } from '../canvas/AutomataCanvas';
 import { TransitionTableView } from '../pipeline/TransitionTableView';
@@ -36,6 +37,9 @@ export const ConversionLab: React.FC = () => {
   const [targetType, setTargetType] = useState<'DFA' | 'NFA' | 'MINIMAL_DFA' | 'REGEX' | 'ENFA'>('DFA');
   const [regexInput, setRegexInput] = useState('(0|1)*01');
   const [testInput, setTestInput] = useState('01');
+  const [inputMode, setInputMode] = useState<'EXAMPLE' | 'VISUAL'>('EXAMPLE');
+  const [customReady, setCustomReady] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'side_by_side' | 'graph_only' | 'table_only'>('side_by_side');
 
   // Step-by-step animation controls
@@ -252,6 +256,19 @@ export const ConversionLab: React.FC = () => {
     setIsPlaying(false);
   };
 
+  const beginCustomBuilder = () => {
+    actions.setAutomaton({ type: sourceType === 'ENFA' ? 'ENFA' : sourceType, states: [], alphabet: [], startState: '', acceptStates: [], transitions: [], description: 'Student-built source automaton' } as Automaton);
+    setInputMode('VISUAL'); setCustomReady(false); setCustomError(null); setCurrentStepIndex(0);
+  };
+
+  const useCustomAutomaton = () => {
+    const validation = validateAutomaton(store.currentAutomaton);
+    const error = validation.issues.find(issue => issue.type === 'error');
+    if (error) { setCustomError(error.message); return; }
+    setCustomReady(true); setCustomError(null); setCurrentStepIndex(0);
+  };
+
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Reasoning Pipeline Timeline Bar */}
@@ -316,7 +333,7 @@ export const ConversionLab: React.FC = () => {
                 placeholder="(0|1)*01"
               />
             </div>
-          ) : (
+          ) : inputMode === 'EXAMPLE' ? (
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-slate-400">Load Preset:</span>
               <select
@@ -324,12 +341,12 @@ export const ConversionLab: React.FC = () => {
                 value={store.activePresetId}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs font-mono text-slate-300 cursor-pointer"
               >
-                {AUTOMATON_PRESETS.map(p => (
+                {AUTOMATON_PRESETS.filter(p => p.automaton.type === sourceType).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
-          )}
+          ) : null}
 
           {/* View Mode Buttons */}
           <div className="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-800">
@@ -363,6 +380,13 @@ export const ConversionLab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {sourceType !== 'REGEX' && (
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+          <div className="flex flex-wrap gap-2 text-xs font-mono"><button onClick={() => { setInputMode('EXAMPLE'); setCustomReady(false); }} className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200">Try an Example</button><button onClick={beginCustomBuilder} className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300">Build My Automaton</button>{inputMode === 'VISUAL' && !customReady && <button onClick={useCustomAutomaton} className="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold">Use This Automaton & Convert</button>}</div>
+          {inputMode === 'VISUAL' && !customReady && <><p className="text-xs text-slate-300">Build your {sourceType}: add states, select start/final states, then connect transitions. This is the exact machine the engine will convert.</p><AutomataCanvas automaton={store.currentAutomaton} onChange={actions.setAutomaton} title={`Build Your ${sourceType}`} />{customError && <p className="text-xs text-rose-300">Fix this before converting: {customError}</p>}</>}
+        </div>
+      )}
 
       {/* Step Navigation Bar */}
       {totalSteps > 0 && (

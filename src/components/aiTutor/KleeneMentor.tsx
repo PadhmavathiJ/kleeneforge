@@ -78,9 +78,18 @@ export const KleeneMentor: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText, history: messages.map(({ sender, text }) => ({ sender, text })), mode: tutorMode, level: store.userLevel }),
       });
-      const data = await response.json();
+      const rawBody = await response.text();
+      if (!rawBody.trim()) throw new Error('The tutor server returned an empty response. Please retry.');
+      let data: { reply?: string; error?: string };
+      try {
+        data = JSON.parse(rawBody);
+      } catch {
+        throw new Error('The tutor server returned an invalid response. Please retry.');
+      }
       if (!response.ok) throw new Error(data.error || 'Tutor request failed.');
-      setMessages(prev => [...prev, { id: `tutor_${Date.now()}`, sender: 'tutor', text: data.reply }]);
+      const reply = data.reply;
+      if (!reply) throw new Error('The tutor returned no answer. Please retry.');
+      setMessages(prev => [...prev, { id: `tutor_${Date.now()}`, sender: 'tutor', text: reply }]);
       setAvatarMood('explaining');
     } catch (error) {
       setMessages(prev => [...prev, { id: `tutor_error_${Date.now()}`, sender: 'tutor', text: error instanceof Error ? error.message : 'Unable to contact the tutor. Please retry.' }]);
