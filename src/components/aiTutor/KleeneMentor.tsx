@@ -51,15 +51,15 @@ export const KleeneMentor: React.FC = () => {
   ]);
 
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputQuery.trim()) return;
+    if ((!inputQuery.trim() && !uploadedImage) || isSending) return;
 
-    const userText = inputQuery.trim();
+    const userText = inputQuery.trim() || 'Please explain this image.';
     setInputQuery('');
 
     const newMsg: ChatMessage = {
@@ -70,12 +70,13 @@ export const KleeneMentor: React.FC = () => {
 
     setMessages(prev => [...prev, newMsg]);
     setAvatarMood('thinking');
+    setIsSending(true);
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, history: messages.map(({ sender, text }) => ({ sender, text })), mode: tutorMode, level: store.userLevel }),
+        body: JSON.stringify({ message: userText, history: messages.map(({ sender, text }) => ({ sender, text })), mode: tutorMode, level: store.userLevel, image: uploadedImage || undefined }),
       });
       const rawBody = await response.text();
       if (!rawBody.trim()) throw new Error('The tutor server returned an empty response. Please retry.');
@@ -91,8 +92,12 @@ export const KleeneMentor: React.FC = () => {
       setMessages(prev => [...prev, { id: `tutor_${Date.now()}`, sender: 'tutor', text: reply }]);
       setAvatarMood('explaining');
     } catch (error) {
-      setMessages(prev => [...prev, { id: `tutor_error_${Date.now()}`, sender: 'tutor', text: error instanceof Error ? error.message : 'Unable to contact the tutor. Please retry.' }]);
+      const unavailable = error instanceof Error && error.message === 'AI Tutor is currently unavailable.';
+      setMessages(prev => [...prev, { id: `tutor_error_${Date.now()}`, sender: 'tutor', text: unavailable ? 'AI Tutor is currently unavailable.' : "Professor Kleene couldn't respond right now. Please try again." }]);
       setAvatarMood('questioning');
+    } finally {
+      setUploadedImage(null);
+      setIsSending(false);
     }
     return;
 
@@ -143,48 +148,10 @@ export const KleeneMentor: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setMessages(prev => [...prev, { id: `image_notice_${Date.now()}`, sender: 'tutor', text: 'Image analysis is not enabled yet. Please describe the diagram or paste its transitions; text chat is available now.' }]);
-    return;
-
     const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = reader.result as string;
-      setUploadedImage(b64);
-      setIsAnalyzingImage(true);
-      setAvatarMood('thinking');
-
-      setTimeout(() => {
-        setIsAnalyzingImage(false);
-        setAvatarMood('explaining');
-
-        const detectedAut: Automaton = {
-          type: 'NFA',
-          states: ['q0', 'q1', 'q2'],
-          alphabet: ['0', '1'],
-          startState: 'q0',
-          acceptStates: ['q2'],
-          transitions: [
-            { from: 'q0', to: 'q0', symbol: '0' },
-            { from: 'q0', to: 'q1', symbol: '1' },
-            { from: 'q1', to: 'q2', symbol: '0' },
-          ],
-        };
-
-        setMessages(prev => [
-          ...prev,
-          {
-            id: `ocr_${Date.now()}`,
-            sender: 'tutor',
-            text: 'I parsed the uploaded diagram. I detected an NFA with states {q0, q1, q2}, start state q0, and accept state q2.\n\n?? Verification note: Transition q0 --1--> q1 was slightly ambiguous. Please confirm if this matches your diagram.',
-            automatonData: detectedAut,
-            needsConfirmation: true,
-          },
-        ]);
-      }, 1500);
-    };
-    const fileToRead = e.currentTarget.files?.item(0);
-    if (!fileToRead) return;
-    reader.readAsDataURL(fileToRead as File);
+    reader.onload = () => setUploadedImage(reader.result as string);
+    reader.onerror = () => setMessages(prev => [...prev, { id: `image_error_${Date.now()}`, sender: 'tutor', text: 'Professor Kleene could not read that image. Please try another file.' }]);
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -242,8 +209,17 @@ export const KleeneMentor: React.FC = () => {
                     : 'border-cyan-400 glow-cyan'
                 }`}
               >
-                <div className="w-full h-full rounded-full bg-slate-950 flex flex-col items-center justify-center text-cyan-300 font-mono text-2xl font-bold shadow-inner">
-                  {avatarMood === 'thinking' ? '??' : avatarMood === 'celebrating' ? '??' : avatarMood === 'questioning' ? '??' : '?????'}
+                <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center shadow-inner" aria-label="Professor Kleene mentor illustration">
+                  <svg viewBox="0 0 120 120" className={`w-24 h-24 ${avatarMood === 'thinking' ? 'animate-pulse' : ''}`} role="img">
+                    <circle cx="60" cy="60" r="54" fill="#e0f2fe" stroke="#0e7490" strokeWidth="3" />
+                    <path d="M30 100c5-23 17-34 30-34s25 11 30 34" fill="#312e81" />
+                    <circle cx="60" cy="48" r="22" fill="#f8fafc" stroke="#334155" strokeWidth="2" />
+                    <path d="M38 45h16m12 0h16M54 45h12" stroke="#0f172a" strokeWidth="3" fill="none" />
+                    <path d="M51 58c6 4 12 4 18 0" stroke="#0e7490" strokeWidth="2" fill="none" />
+                    <path d="M43 31c7-10 28-11 35 2" stroke="#334155" strokeWidth="7" fill="none" strokeLinecap="round" />
+                    <circle cx="22" cy="29" r="5" fill="#4f46e5" /><circle cx="98" cy="29" r="5" fill="#0e7490" />
+                    <path d="M27 29h18m48 0h-18" stroke="#64748b" strokeWidth="2" />
+                  </svg>
                 </div>
               </div>
 
@@ -371,28 +347,30 @@ export const KleeneMentor: React.FC = () => {
                   <ImageIcon className="w-4 h-4" />
                 </button>
 
-                <input
-                  type="text"
+                <textarea
                   value={inputQuery}
                   onChange={e => setInputQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
                   placeholder="Ask Kleene Mentor or discuss a formal problem..."
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400"
+                  rows={2}
+                  className="flex-1 resize-none bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400"
                 />
 
                 <button
                   type="submit"
-                  disabled={!inputQuery.trim()}
+                  disabled={(!inputQuery.trim() && !uploadedImage) || isSending}
                   className="p-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold rounded-xl transition-all shadow cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
 
-              {isAnalyzingImage && (
+              {uploadedImage && !isSending && (
                 <div className="text-[11px] font-mono text-cyan-400 animate-pulse">
-                  Analyzing uploaded automaton diagram with vision OCR...
+                  Image attached. Ask Professor Kleene to solve, explain, or check it.
                 </div>
               )}
+              {isSending && <div className="text-[11px] font-mono text-cyan-700">Professor Kleene is thinking<span className="animate-pulse">...</span></div>}
             </form>
           </div>
         </div>
