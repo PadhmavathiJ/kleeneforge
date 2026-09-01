@@ -1,6 +1,34 @@
 import { Automaton, MinimizationResult, MinimizationStep, Transition } from './types';
 import { isEpsilon } from './epsilonClosure';
 
+/** Complete a partial DFA with one explicit rejecting trap state. This gives
+ * partition refinement the same semantics as simulation and makes the output
+ * a genuinely minimal complete DFA rather than merely a partial quotient. */
+function completeDFA(dfa: Automaton, alphabet: string[]): Automaton {
+  let trapState = '__TRAP__';
+  while (dfa.states.includes(trapState)) trapState = `_${trapState}`;
+
+  const states = [...dfa.states];
+  const transitions = [...dfa.transitions];
+  let needsTrap = false;
+
+  for (const state of dfa.states) {
+    for (const symbol of alphabet) {
+      if (!transitions.some(t => t.from === state && t.symbol === symbol)) {
+        transitions.push({ from: state, to: trapState, symbol });
+        needsTrap = true;
+      }
+    }
+  }
+
+  if (needsTrap) {
+    states.push(trapState);
+    for (const symbol of alphabet) transitions.push({ from: trapState, to: trapState, symbol });
+  }
+
+  return { ...dfa, states, alphabet, transitions };
+}
+
 /**
  * Removes unreachable states from a DFA.
  */
@@ -44,11 +72,26 @@ export function removeUnreachableStates(dfa: Automaton): {
  * Minimizes a DFA using the Partition Refinement (Hopcroft's equivalence) Algorithm.
  */
 export function minimizeDFA(dfa: Automaton): MinimizationResult {
+  if (dfa.type !== 'DFA') {
+    throw new Error('DFA minimization requires an automaton whose type is DFA.');
+  }
+
   const steps: MinimizationStep[] = [];
   const alphabet = dfa.alphabet.filter(s => !isEpsilon(s));
+  if (dfa.transitions.some(t => isEpsilon(t.symbol))) {
+    throw new Error('DFA minimization does not allow epsilon transitions. Convert to a DFA first.');
+  }
+  for (const state of dfa.states) {
+    for (const symbol of alphabet) {
+      if (dfa.transitions.filter(t => t.from === state && t.symbol === symbol).length > 1) {
+        throw new Error(`DFA minimization requires one transition from ${state} on '${symbol}'.`);
+      }
+    }
+  }
+  const completeInput = completeDFA(dfa, alphabet);
 
   // Step 1: Remove unreachable states
-  const { reachableDfa, unreachableStates } = removeUnreachableStates(dfa);
+  const { reachableDfa, unreachableStates } = removeUnreachableStates(completeInput);
   const cleanStates = reachableDfa.states;
 
   steps.push({

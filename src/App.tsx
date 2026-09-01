@@ -86,6 +86,7 @@ const viewToPathMap: Record<AppView, string> = {
   ANALYTICS: '#analytics',
   MISTAKES: '#mistakes',
   FLASH_REVIEW: '#flash-review',
+  EXPERIMENTS: '#experiments',
 };
 
 export function App() {
@@ -109,7 +110,11 @@ export function App() {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handleHashChange);
     };
-  }, [actions, store.currentView]);
+    // Do not recreate this listener for each view update. Otherwise it can read
+    // the previous hash and undo an in-app navigation before hash syncing runs.
+    // `setView` mutates the module-level store, so this reference stays valid.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync window hash when view changes
   useEffect(() => {

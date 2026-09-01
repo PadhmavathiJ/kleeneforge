@@ -1,7 +1,15 @@
 import { Automaton } from './types';
 
 export function isEpsilon(symbol: string): boolean {
-  return symbol === 'e' || symbol === 'e' || symbol === '' || symbol === '?' || symbol === 'eps';
+  const normalized = symbol.trim().toLowerCase();
+  return normalized === ''
+    || normalized === 'e'
+    || normalized === '\u03b5'
+    || normalized === '\u03f5'
+    || normalized === 'eps'
+    || normalized === 'epsilon'
+    || normalized === 'lambda'
+    || normalized === '\u03bb';
 }
 
 /**

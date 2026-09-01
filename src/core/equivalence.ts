@@ -7,13 +7,20 @@ import { isEpsilon } from './epsilonClosure';
  * Ensures an automaton is converted to a complete DFA with uniform alphabet.
  */
 function ensureCompleteDFA(automaton: Automaton, unifiedAlphabet: string[]): Automaton {
-  // If not a DFA or has epsilons, convert via subset construction
-  let dfa = automaton.type === 'DFA' && !automaton.transitions.some(t => isEpsilon(t.symbol))
+  // Convert malformed/non-deterministic "DFAs" too, so product construction
+  // always operates on one transition per state and symbol.
+  const isDeterministicDfa = automaton.type === 'DFA'
+    && !automaton.transitions.some(t => isEpsilon(t.symbol))
+    && automaton.states.every(state => unifiedAlphabet.every(symbol =>
+      automaton.transitions.filter(t => t.from === state && t.symbol === symbol).length <= 1
+    ));
+  let dfa = isDeterministicDfa
     ? automaton
     : convertNfaToDfa(automaton).dfa;
 
   // Add explicit trap state if missing transitions for completeness
-  const trapState = '__TRAP__';
+  let trapState = '__TRAP__';
+  while (dfa.states.includes(trapState)) trapState = `_${trapState}`;
   let trapUsed = false;
   const newTransitions = [...dfa.transitions];
   const newStates = [...dfa.states];
@@ -85,9 +92,6 @@ export function checkAutomataEquivalence(
       counterAccB = isAccB;
       break;
     }
-
-    // Limit BFS depth to prevent runaway in edge cases (up to 12 length)
-    if (path.length > 12) continue;
 
     for (const sym of unifiedAlphabet) {
       const transA = dfaA.transitions.find(t => t.from === stateA && t.symbol === sym);

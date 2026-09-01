@@ -20,10 +20,25 @@ import {
 export const BuilderStudio: React.FC = () => {
   const [store, actions] = useAppStore();
   const [testString, setTestString] = useState('01');
+  const [simulationStepIndex, setSimulationStepIndex] = useState(0);
 
   // Semantic linter issues
   const validation = validateAutomaton(store.currentAutomaton);
   const simResult = simulateAutomaton(store.currentAutomaton, testString);
+  const simulationStep = simResult.steps[Math.min(simulationStepIndex, Math.max(0, simResult.steps.length - 1))];
+
+  const handleClearCanvas = () => {
+    actions.setAutomaton({
+      type: store.currentAutomaton.type,
+      states: ['q0'],
+      alphabet: [...store.currentAutomaton.alphabet],
+      startState: 'q0',
+      acceptStates: [],
+      transitions: [],
+      description: 'New automaton',
+    });
+    setSimulationStepIndex(0);
+  };
 
   const handleExportJson = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(store.currentAutomaton, null, 2));
@@ -67,6 +82,13 @@ export const BuilderStudio: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleClearCanvas}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/50 hover:bg-rose-900/70 text-rose-200 border border-rose-800/60 rounded-xl text-xs font-mono transition-all"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Clear Canvas</span>
+          </button>
           <label className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-mono cursor-pointer transition-all">
             <Upload className="w-3.5 h-3.5" />
             <span>Import JSON</span>
@@ -90,6 +112,8 @@ export const BuilderStudio: React.FC = () => {
           <AutomataCanvas
             automaton={store.currentAutomaton}
             onChange={actions.setAutomaton}
+            activeStateIds={simulationStep?.nextStates || []}
+            highlightedTransitions={simulationStep?.activeTransitions || []}
             title={`${store.currentAutomaton.type} Editor Canvas`}
           />
 
@@ -111,6 +135,14 @@ export const BuilderStudio: React.FC = () => {
                 <option value="ENFA">e-NFA</option>
               </select>
             </div>
+
+            {simResult.steps.length > 1 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-400"><span>Trace step</span><span>{Math.min(simulationStepIndex, simResult.steps.length - 1)} / {simResult.steps.length - 1}</span></div>
+                <input type="range" min="0" max={simResult.steps.length - 1} value={Math.min(simulationStepIndex, simResult.steps.length - 1)} onChange={e => setSimulationStepIndex(Number(e.target.value))} className="w-full accent-cyan-400" />
+                <p className="text-[10px] text-slate-400 leading-relaxed">{simulationStep?.explanation}</p>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="text-slate-400">Load Preset:</span>

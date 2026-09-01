@@ -21,7 +21,7 @@ export interface RegexToken {
  * Checks if a character is a formal epsilon indicator.
  */
 export function isEpsChar(c: string): boolean {
-  return c === 'e' || c === '?' || c === 'E';
+  return c === 'e' || c === 'E' || c === '\u03b5' || c === '\u03f5' || c === '\u03bb';
 }
 
 /**

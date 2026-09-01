@@ -6,6 +6,7 @@ import { minimizeDFA } from '../../core/minimization';
 import { convertAutomatonToRegex } from '../../core/regex/gnfa';
 import { regexToENFA } from '../../core/regex/thompson';
 import { checkAutomataEquivalence } from '../../core/equivalence';
+import { simulateAutomaton } from '../../core/simulation';
 import { AUTOMATON_PRESETS } from '../../core/presets';
 import { AutomataCanvas } from '../canvas/AutomataCanvas';
 import { TransitionTableView } from '../pipeline/TransitionTableView';
@@ -33,6 +34,7 @@ export const ConversionLab: React.FC = () => {
   const [sourceType, setSourceType] = useState<'NFA' | 'ENFA' | 'DFA' | 'REGEX'>('NFA');
   const [targetType, setTargetType] = useState<'DFA' | 'MINIMAL_DFA' | 'REGEX' | 'ENFA'>('DFA');
   const [regexInput, setRegexInput] = useState('(0|1)*01');
+  const [testInput, setTestInput] = useState('01');
   const [viewMode, setViewMode] = useState<'side_by_side' | 'graph_only' | 'table_only'>('side_by_side');
 
   // Step-by-step animation controls
@@ -134,18 +136,29 @@ export const ConversionLab: React.FC = () => {
 
       if (targetType === 'REGEX') {
         const gnfaRes = convertAutomatonToRegex(store.currentAutomaton);
+        let verificationAutomaton: Automaton | undefined;
+        let isEquivalent = false;
+        let verificationError: string | undefined;
+        try {
+          verificationAutomaton = regexToENFA(gnfaRes.simplifiedRegex).automaton;
+          isEquivalent = checkAutomataEquivalence(store.currentAutomaton, verificationAutomaton).areEquivalent;
+        } catch (error) {
+          verificationError = error instanceof Error ? error.message : 'Generated expression could not be parsed for verification.';
+        }
         return {
           type: 'GNFA_TO_REGEX',
           originalAut: store.currentAutomaton,
           resultRegex: gnfaRes.simplifiedRegex,
           latexRegex: gnfaRes.latexRegex,
+          verificationAutomaton,
+          verificationError,
           steps: gnfaRes.steps.map((s, i) => ({
             index: i,
             title: `Eliminate State '${s.eliminatedState}'`,
             explanation: s.explanation,
             activeStates: [s.eliminatedState],
           })),
-          isEquivalent: true,
+          isEquivalent,
         };
       }
 
@@ -175,6 +188,14 @@ export const ConversionLab: React.FC = () => {
 
   const totalSteps = conversionData.steps ? conversionData.steps.length : 0;
   const currentStep = conversionData.steps && conversionData.steps[currentStepIndex];
+  const sourceMembership = conversionData.originalAut
+    ? simulateAutomaton(conversionData.originalAut, testInput)
+    : undefined;
+  const resultMembership = conversionData.resultAut
+    ? simulateAutomaton(conversionData.resultAut, testInput)
+    : conversionData.verificationAutomaton
+      ? simulateAutomaton(conversionData.verificationAutomaton, testInput)
+      : undefined;
 
   // Auto-play timer
   useEffect(() => {
@@ -229,6 +250,7 @@ export const ConversionLab: React.FC = () => {
               onChange={e => {
                 const val = e.target.value as any;
                 setSourceType(val);
+                setTargetType(val === 'REGEX' ? 'ENFA' : val === 'DFA' ? 'MINIMAL_DFA' : 'DFA');
                 setCurrentStepIndex(0);
               }}
               className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
@@ -254,10 +276,10 @@ export const ConversionLab: React.FC = () => {
               }}
               className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-purple-300 focus:outline-none focus:border-purple-500 cursor-pointer"
             >
-              <option value="DFA">DFA</option>
-              <option value="MINIMAL_DFA">Minimal DFA</option>
-              <option value="REGEX">Regular Expression</option>
-              <option value="ENFA">ε-NFA</option>
+              {(sourceType === 'REGEX' || sourceType === 'NFA' || sourceType === 'ENFA') && <option value="DFA">DFA</option>}
+              {sourceType === 'DFA' && <option value="MINIMAL_DFA">Minimal DFA</option>}
+              {sourceType !== 'REGEX' && <option value="REGEX">Regular Expression</option>}
+              {sourceType === 'REGEX' && <option value="ENFA">ε-NFA</option>}
             </select>
           </div>
         </div>
@@ -375,9 +397,9 @@ export const ConversionLab: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+          <div className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1 rounded-lg border ${conversionData.isEquivalent ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-300 bg-amber-500/10 border-amber-500/20'}`}>
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Equivalence Verified</span>
+            <span>{conversionData.isEquivalent ? 'Equivalence Verified' : 'Verification unavailable or failed'}</span>
           </div>
         </div>
       )}
@@ -458,8 +480,22 @@ export const ConversionLab: React.FC = () => {
               examShortcutText="GATE Shortcut: Track only reachable subsets. Do not construct all 2^n subsets if they cannot be reached from the start state."
             />
           )}
+
+          {conversionData.verificationError && (
+            <p className="text-xs font-mono text-amber-300">Verification detail: {conversionData.verificationError}</p>
+          )}
         </div>
       </div>
+
+      {sourceMembership && resultMembership && (
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center gap-3 text-xs font-mono">
+          <label className="text-slate-400">Test string</label>
+          <input value={testInput} onChange={e => setTestInput(e.target.value)} placeholder="empty string" className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-cyan-200" />
+          <span className={sourceMembership.accepted ? 'text-emerald-300' : 'text-rose-300'}>Input: {sourceMembership.accepted ? 'ACCEPT' : 'REJECT'}</span>
+          <span className={resultMembership.accepted ? 'text-emerald-300' : 'text-rose-300'}>Result: {resultMembership.accepted ? 'ACCEPT' : 'REJECT'}</span>
+          <span className={sourceMembership.accepted === resultMembership.accepted ? 'text-emerald-400' : 'text-rose-400'}>{sourceMembership.accepted === resultMembership.accepted ? 'Membership agrees' : 'Membership differs'}</span>
+        </div>
+      )}
     </div>
   );
 };
